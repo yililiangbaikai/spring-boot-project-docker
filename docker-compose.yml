@@ -1,0 +1,18 @@
+ncu-academic-api:
+  # 免构建镜像，未修改构建文件下等同于构建本地镜像，如使用本地 build 需注释此行并关闭 build 注释。
+  #image: centos:jdk-vote6.0
+  #mem_limit: 2048m
+  # 构建本地镜像
+  build: ./
+  #links:
+  #  - ncudccs_mysql
+  #  - ncudccs_redis
+  # 将容器的8080端口绑定到宿主机的80端口
+  ports:
+    - "9191:8080"
+  # java-maven-tomcat 容器启动后的运行命令
+  command: "bash /code/build.sh"
+  volumes:
+    # 挂载 JAVA 源代码目录
+    - ./code:/code
+  restart: always
