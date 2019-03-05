@@ -5,8 +5,6 @@ ncu-academic-api:
   # 构建本地镜像
   build: ./
   #links:
-  #  - ncudccs_mysql
-  #  - ncudccs_redis
   # 将容器的8080端口绑定到宿主机的80端口
   ports:
     - "9191:8080"
@@ -14,5 +12,5 @@ ncu-academic-api:
   command: "bash /code/build.sh"
   volumes:
     # 挂载 JAVA 源代码目录
-    - ./code:/code
+    - ./code:/tmp
   restart: always

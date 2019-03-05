@@ -1,31 +1,41 @@
-FROM codenvy/shellinabox
-RUN sudo apt-get update && sudo apt-get install git -y
-LABEL che:server:8080:ref=tomcat8 che:server:8080:protocol=http che:server:8000:ref=tomcat8-debug che:server:8000:protocol=http che:server:4200:ref=shellinabox che:server:4200:protocol=http
-RUN wget \
-    --no-cookies \
-    --no-check-certificate \
-    --header "Cookie: oraclelicense=accept-securebackup-cookie" \
-    -qO- \
-    "http://download.oracle.com/otn-pub/java/jdk/8u51-b16/jdk-8u51-linux-x64.tar.gz" | sudo tar -zx -C /opt/
-     
-ENV JAVA_HOME /opt/jdk1.8.0_51
-RUN echo "export JAVA_HOME=$JAVA_HOME" >> /home/user/.bashrc
-ENV PATH $JAVA_HOME/bin:$PATH
-RUN echo "export PATH=$PATH" >> /home/user/.bashrc
+# 安装maven
+FROM maven:3.3.9-jdk-8
 
-RUN mkdir /home/user/tomcat8 && \
-    wget -qO- "http://archive.apache.org/dist/tomcat/tomcat-8/v8.0.24/bin/apache-tomcat-8.0.24.tar.gz" | tar -zx --strip-components=1 -C /home/user/tomcat8 && \
-    rm -rf /home/user/tomcat8/webapps/*
-     
-EXPOSE 8080 8000
-ENV CODENVY_APP_PORT_8080_HTTP 8080
+#设置时区
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo "Asia/Shanghai" > /etc/timezone
+RUN dpkg-reconfigure -f noninteractive tzdata
 
+# china mirrors
+ADD sources.list /etc/apt/sources.list
+ADD settings.xml /usr/share/maven/ref/
 
-RUN mkdir -p /home/user/maven3 && \
-    wget -qO- "http://archive.apache.org/dist/maven/maven-3/3.1.1/binaries/apache-maven-3.1.1-bin.tar.gz" | tar -zx --strip-components=1 -C /home/user/maven3
-ENV M2_HOME /home/user/maven3   
-RUN echo "export M2_HOME=$M2_HOME" >> /home/user/.bashrc
-ENV PATH $M2_HOME/bin:$PATH
-RUN echo "export PATH=$PATH" >> /home/user/.bashrc
-CMD tailf /dev/null
+RUN \
+  apt-get update \
 
+  # 安装 FFmpeg (source code make)
+  && apt-get install -y yasm pkg-config make gcc \
+  # && curl -fSL "https://codeload.github.com/FFmpeg/FFmpeg/zip/master" -o FFmpeg.zip \
+  && curl http://o8svz33ym.bkt.clouddn.com/FFmpeg.zip -o FFmpeg.zip && unzip FFmpeg.zip \
+  && cd FFmpeg && ./configure && make && make install \
+  && cd ../ && rm -rf FFmpeg FFmpeg.zip \
+
+  # 安装微软雅黑字体
+  && curl -O http://o8svz33ym.bkt.clouddn.com/msyh.ttf \
+  && cp msyh.ttf /usr/share/fonts/truetype/msyh.ttf \
+  && fc-cache -fv \
+
+  # clear
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/
+
+# 拷贝部署脚本到镜像
+ADD build.sh /tmp/
+
+# 允许挂载 Tomcat 日志目录
+VOLUME /usr/local/tomcat/logs
+
+# 允许挂载源码目录
+VOLUME /tmp/code
+
+EXPOSE 8080
